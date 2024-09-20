@@ -1,0 +1,22 @@
+# Ignore the dist folder
+dist/
+build/
+
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore environment directories
+venv/
+env/
+
+# Ignore other common files
+*.log
+*.sqlite3
+*.db
+
+# Ignore IDE/editor config files
+.vscode/
+.idea/
+*.swp
