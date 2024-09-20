@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  stopwatch:
+    build: .
+    container_name: stopwatch_app
+    volumes:
+      - .:/app
+    # Uncomment the line below if you want to expose a port
+    # ports:
+    #   - "8080:8080"
+    environment:
+      - DISPLAY=:99
+    # Uncomment the line below for GUI applications on Linux
+    # devices:
+    #   - /dev/dri:/dev/dri
