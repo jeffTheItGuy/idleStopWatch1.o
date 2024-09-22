@@ -1,10 +1,11 @@
 import sys
 import json
-
-
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QLineEdit
+import os
+import glob
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QLineEdit, QMessageBox
 from PyQt5.QtCore import QTimer, QTime, Qt
 from datetime import datetime
+from json_viewer import JSONViewer  # Import the JSONViewer dialog
 
 class StopwatchApp(QWidget):
     def __init__(self):
@@ -58,8 +59,18 @@ class StopwatchApp(QWidget):
 
         # Save button
         self.save_btn = QPushButton('Save', self)
-        self.save_btn.clicked.connect(self.save_time)  # Connect the save button to save_time method
+        self.save_btn.clicked.connect(self.save_time)
         button_layout.addWidget(self.save_btn)
+
+        # View Saved Data button
+        self.view_btn = QPushButton('View Saved Data', self)
+        self.view_btn.clicked.connect(self.view_saved_data)
+        button_layout.addWidget(self.view_btn)
+
+        # Delete Saved Data button
+        self.delete_btn = QPushButton('Delete Saved Data', self)
+        self.delete_btn.clicked.connect(self.delete_saved_data)
+        button_layout.addWidget(self.delete_btn)
 
         # Add everything to the main layout
         main_layout.addWidget(self.time_display)
@@ -109,6 +120,8 @@ class StopwatchApp(QWidget):
         self.running = False
         self.task_name_input.clear()
 
+  
+
     def save_time(self):
         # Get the current time for both the main and secondary clocks
         main_time_str = self.time.toString("hh:mm:ss")
@@ -117,23 +130,71 @@ class StopwatchApp(QWidget):
         # Get the task name
         task_name = self.task_name_input.text()
 
-         # Get the current date and time
+        # Get the current date and time
         current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Create a dictionary to store the time data
-        time_data = {
+        # Create a dictionary to store the new task's time data
+        new_task = {
             'task_name': task_name,
             'main_time': main_time_str,
             'secondary_time': secondary_time_str,
             'timestamp': current_datetime 
         }
 
-        # Save the dictionary as a JSON file
-        with open('stopwatch_times.json', 'w') as f:
+        # Get the current date for file naming
+        current_date_for_filename = datetime.now().strftime("%Y%m%d")
+
+        # Check if a file for today already exists using a glob pattern
+        existing_files = glob.glob(f'stopwatch_times_{current_date_for_filename}*.json')
+
+        if existing_files:
+            # If a file exists for today, open the first match
+            filename = existing_files[0]
+            try:
+                with open(filename, 'r') as f:
+                    time_data = json.load(f)
+                    if not isinstance(time_data, list):
+                        time_data = []  # Ensure it's a list if there's any issue
+            except json.JSONDecodeError:
+                time_data = []  # In case the file is corrupt or empty, start fresh
+        else:
+            # If no file exists for today, create a new one
+            current_time_for_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f'stopwatch_times_{current_time_for_filename}.json'
+            time_data = []  # Start with an empty list
+
+        # Append the new task to the existing list of tasks
+        time_data.append(new_task)
+
+        # Save the updated list of tasks back to the JSON file
+        with open(filename, 'w') as f:
             json.dump(time_data, f, indent=4)
 
-        print(f"Time saved to stopwatch_times.json: {time_data}")
+        print(f"Task saved to {filename}: {new_task}")
+        
+        # Reset the clock
+        self.reset_timer()
 
+
+
+
+    def view_saved_data(self):
+        # Open the JSON viewer dialog to display the saved JSON content
+        viewer = JSONViewer('stopwatch_times.json', self)
+        viewer.exec_()
+
+    def delete_saved_data(self):
+        # Confirm before deleting
+        reply = QMessageBox.question(self, 'Confirm Deletion',
+                                     'Are you sure you want to delete the saved data?',
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            try:
+                os.remove('stopwatch_times.json')
+                QMessageBox.information(self, 'Deleted', 'Saved data has been deleted.')
+            except FileNotFoundError:
+                QMessageBox.warning(self, 'Error', 'No saved data found to delete.')
 
 # Application setup
 def main():
@@ -141,7 +202,6 @@ def main():
     stopwatch = StopwatchApp()
     stopwatch.show()
     sys.exit(app.exec_())
-
 
 if __name__ == '__main__':
     main()
